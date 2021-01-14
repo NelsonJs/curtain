@@ -1,5 +1,6 @@
+import 'dart:async';
 import 'dart:io';
-import 'dart:math';
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
@@ -17,7 +18,7 @@ class _StateCut extends State<Cut> {
   List<Offset> paths = [];
   int clickTime;
   int target = -1;
-  Widget clipWidget;
+  ClipPath clipWidget;
 
   Future getImageFromGallery() async {
     final pickedFile = await picker.getImage(source: ImageSource.gallery);
@@ -51,12 +52,12 @@ class _StateCut extends State<Cut> {
               print("点击保存");
               setState(() {
                 clipWidget = ClipPath(
-                  child: Center(
-                    child: Image.file(_imageGallery),
-                  ),
+                  child: Image.file(_imageGallery),
                   clipper: _PathClipper(paths),
                 );
+                Navigator.pop(context,clipWidget);
               });
+
             },
           ),
           Center(
@@ -101,14 +102,77 @@ class _StateCut extends State<Cut> {
               ),
               foregroundPainter: MyPainter(paths),
             ) : clipWidget
-          )
+          ),
         ],
       ),
     );
   }
 
-  start(){
+  /*Future<Shader> _loadShader() async {
+    final completer = Completer<ImageInfo>();
+    ImageConfiguration imageConfiguration = ImageConfiguration();
+    FileImage(_imageGallery).resolve(imageConfiguration).addListener(ImageStreamListener((info, _) => completer.complete(info)));
+    final info = await completer.future;
+    return ImageShader(info.image, TileMode.clamp, TileMode.clamp,   Float64List.fromList(Matrix4.identity().storage));
+  }
 
+  startCut(){
+    Paint paint = Paint();
+    var path = Path();
+    double minW = 0,minH = 0,maxW = 0,maxH = 0;
+    for (int i = 0; i < paths.length; i++){
+      if (minW > paths[i].dx){
+        minW = paths[i].dx;
+      } else {
+        maxW = paths[i].dx;
+      }
+      if (minH > paths[i].dy){
+        minH = paths[i].dy;
+      } else {
+        maxH = paths[i].dy;
+      }
+
+      if (i == 0) {
+        print(paths[i].dx);
+        print(paths[i].dy);
+        path.moveTo(paths[i].dx, paths[i].dy);
+      } else if (i < paths.length) {
+        path.lineTo(paths[i].dx, paths[i].dy);
+      }
+    }
+    path.close();
+    _loadShader().then((value){
+      paint.shader = value;
+      PictureRecorder recorder =  PictureRecorder();
+      var c = Canvas(recorder);
+      c.drawPath(path, paint);
+      print("宽度");
+      print((maxW-minW).ceil());
+      recorder.endRecording().toImage((maxW-minW).ceil(), (maxH - minH).ceil()).then((value){
+        // Navigator.pop(context,value);
+        setState(() {
+
+        });
+      });
+    });
+  }*/
+
+}
+
+class TestPainter extends CustomPainter {
+  var img;
+  TestPainter(clipImage){
+    img = clipImage;
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawImage(img, Offset(0, 0), Paint());
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return true;
   }
 
 }
@@ -132,10 +196,6 @@ class _PathClipper extends CustomClipper<Path> {
         path.lineTo(paths[i].dx, paths[i].dy);
       }
     }
-    /*path.moveTo(235.7, 52.3);
-    path.lineTo(324.0, 58.3);
-    path.lineTo(321.0, 305.3);
-    path.lineTo(234.3, 305.3);*/
     path.close();
     return path;
   }
@@ -165,9 +225,6 @@ class MyPainter extends CustomPainter {
         canvas.drawLine(paths[i],paths[i+1], paint);
       }
     }
-
-    print("paint");
-    print(paths.length);
   }
 
   @override
