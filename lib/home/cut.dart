@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui';
 
+import 'package:curtain/bean/cut-transform.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -15,10 +16,11 @@ class Cut extends StatefulWidget {
 class _StateCut extends State<Cut> {
   File _imageGallery;
   final picker = ImagePicker();
-  List<Offset> paths = [];
   int clickTime;
   int target = -1;
   ClipPath clipWidget;
+  Widget galleryWidget;
+  CutTBean ctb;
 
   Future getImageFromGallery() async {
     final pickedFile = await picker.getImage(source: ImageSource.gallery);
@@ -26,6 +28,9 @@ class _StateCut extends State<Cut> {
     setState(() {
       if (pickedFile != null) {
         _imageGallery = File(pickedFile.path);
+        galleryWidget = Image.file(_imageGallery);
+        List<Offset> paths = [];
+        ctb = CutTBean(_imageGallery, paths, 0, 0);
       } else {
         print('No image selected.');
       }
@@ -49,60 +54,61 @@ class _StateCut extends State<Cut> {
               margin: EdgeInsets.only(top: 50,bottom: 20),
             ),
             onTap: (){
-              print("点击保存");
+
               setState(() {
                 clipWidget = ClipPath(
-                  child: Image.file(_imageGallery),
-                  clipper: _PathClipper(paths),
+                  child: galleryWidget,
+                  clipper: _PathClipper(ctb),
                 );
-                Navigator.pop(context,clipWidget);
+               Future.delayed(Duration(milliseconds: 100),(){
+                 print("点击保存"+ctb.width.toString());
+                 Navigator.pop(context,CutTBean(_imageGallery, ctb.paths,ctb.width,ctb.height));
+               });
               });
 
             },
           ),
-          Center(
-            child: _imageGallery == null
-                ? Text('No image selected.')
-                :
-            clipWidget == null ? CustomPaint(
-              child: RepaintBoundary(
-                child: Listener(
-                  child: Image.file(_imageGallery),
-                  onPointerDown: (PointerDownEvent event){
-                    clickTime = DateTime.now().millisecondsSinceEpoch;
-                    for (int i = 0; i < paths.length; i++){
-                      if ((event.localPosition.dx <= paths[i].dx + 20 && event.localPosition.dx >= paths[i].dx - 20) &&
-                          (event.localPosition.dy <= paths[i].dy + 20 && event.localPosition.dy >= paths[i].dy - 20) ){//表示按住了某个已经存在的点
-                        target = i;
-                        break;
-                      }
+         _imageGallery == null
+              ? Text('No image selected.')
+              :
+          clipWidget == null ? CustomPaint(
+            child: RepaintBoundary(
+              child: Listener(
+                child: galleryWidget,
+                onPointerDown: (PointerDownEvent event){
+                  clickTime = DateTime.now().millisecondsSinceEpoch;
+                  for (int i = 0; i < ctb.paths.length; i++){
+                    if ((event.localPosition.dx <= ctb.paths[i].dx + 20 && event.localPosition.dx >= ctb.paths[i].dx - 20) &&
+                        (event.localPosition.dy <= ctb.paths[i].dy + 20 && event.localPosition.dy >= ctb.paths[i].dy - 20) ){//表示按住了某个已经存在的点
+                      target = i;
+                      break;
                     }
-                  },
-                  onPointerUp: (PointerUpEvent event){
-                    int uptime = DateTime.now().millisecondsSinceEpoch;
-                    if (uptime - clickTime <= 500){//表示点击
-                      print(event.localPosition);
-                      if (target == -1){//只有没有点击已存在的点的时候才加入
-                        setState(() {
-                          paths.add(event.localPosition);
-                        });
-                      }
-                    }
-                    target = -1;
-                    clickTime = uptime;
-                  },
-                  onPointerMove: (PointerMoveEvent event){
-                    if (target != -1) {
+                  }
+                },
+                onPointerUp: (PointerUpEvent event){
+                  int uptime = DateTime.now().millisecondsSinceEpoch;
+                  if (uptime - clickTime <= 500){//表示点击
+                    print(event.localPosition);
+                    if (target == -1){//只有没有点击已存在的点的时候才加入
                       setState(() {
-                        paths[target] = event.localPosition;
+                        ctb.paths.add(event.localPosition);
                       });
                     }
-                  },
-                ),
+                  }
+                  target = -1;
+                  clickTime = uptime;
+                },
+                onPointerMove: (PointerMoveEvent event){
+                  if (target != -1) {
+                    setState(() {
+                      ctb.paths[target] = event.localPosition;
+                    });
+                  }
+                },
               ),
-              foregroundPainter: MyPainter(paths),
-            ) : clipWidget
-          ),
+            ),
+            foregroundPainter: MyPainter(ctb.paths),
+          ) : clipWidget
         ],
       ),
     );
@@ -179,18 +185,20 @@ class TestPainter extends CustomPainter {
 
 class _PathClipper extends CustomClipper<Path> {
   List<Offset> paths;
-  _PathClipper(List<Offset> paths){
-    this.paths = paths;
+  CutTBean ctb;
+  _PathClipper(CutTBean ctb){
+    this.paths = ctb.paths;
+    this.ctb = ctb;
   }
 
   @override
   Path getClip(Size size) {
     var path = Path();
-    print(size.width);
+    ctb.width = size.width;
+    ctb.height = size.height;
+    print("size大小:"+size.width.toString()+"--"+size.height.toString());
     for (int i = 0; i < paths.length; i++){
       if (i == 0) {
-        print(paths[i].dx);
-        print(paths[i].dy);
         path.moveTo(paths[i].dx, paths[i].dy);
       } else if (i < paths.length) {
         path.lineTo(paths[i].dx, paths[i].dy);

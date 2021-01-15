@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:curtain/bean/cut-transform.dart';
 import 'package:curtain/custom/move-matrix.dart';
 import 'package:curtain/home/cut.dart';
 import 'package:flutter/cupertino.dart';
@@ -23,6 +24,7 @@ class _StateDesign extends State<Design> {
       if (pickedFile != null) {
         _image = File(pickedFile.path);
         items.add(Image.file(_image));
+       // items.add(Positioned(child: Image.asset("images/ab.jpg"),left: 20,top: 20,));
       } else {
         print('No image selected.');
       }
@@ -51,14 +53,16 @@ class _StateDesign extends State<Design> {
               :
           RepaintBoundary(
               child: Stack(
-                children: items,
+                children:items
               )
+
           ),
           GestureDetector(
             child: Icon(Icons.image,size: 50),
             onTap: (){
               Navigator.push(context, MaterialPageRoute(builder: (context)=>Cut())).then((value){
-                print("收到返回的数据");
+                CutTBean ctb = value;
+                print("收到返回的数据"+ctb.width.toString());
                setState(() {
                  items.add(MoveMatrixWidget(value));
                });
@@ -76,36 +80,3 @@ class _StateDesign extends State<Design> {
 
 }
 
-class drawCutImg extends CustomPainter{
-  var img;
-  Offset cutOffset = Offset(50, 50);
-  drawCutImg(cutImage, Offset cutOffset){
-    img = cutImage;
-    this.cutOffset = cutOffset;
-  }
-
-
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    Paint paint = Paint();
-    paint.style = PaintingStyle.fill;
-    paint.strokeWidth = 10;
-    paint.color = Colors.red;
-    print("执行paint");
-    if (cutOffset == null){
-      cutOffset = Offset(50, 50);
-    }
-    if (img != null) {
-      print("paint非空");
-      canvas.drawImage(img, cutOffset, paint);
-    }
-    //canvas.drawCircle(cutOffset, 22, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return true;
-  }
-
-}
