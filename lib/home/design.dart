@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:curtain/bean/cut-transform.dart';
+import 'package:curtain/custom/move-matrix.dart';
 import 'package:curtain/home/cut.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +13,8 @@ class Design extends StatefulWidget {
 }
 class _StateDesign extends State<Design> {
   File _image;
+  List<Widget> items = [];
+  Widget clipWidget;
   final picker = ImagePicker();
 
   Future getImage() async {
@@ -19,6 +23,8 @@ class _StateDesign extends State<Design> {
     setState(() {
       if (pickedFile != null) {
         _image = File(pickedFile.path);
+        items.add(Image.file(_image));
+       // items.add(Positioned(child: Image.asset("images/ab.jpg"),left: 20,top: 20,));
       } else {
         print('No image selected.');
       }
@@ -39,24 +45,28 @@ class _StateDesign extends State<Design> {
       body:  Column(
         children: [
           Container(
-            child: GestureDetector(
-              child: Text('保存'),
-            ),
+            child: Text('保存'),
             margin: EdgeInsets.only(top: 30,bottom: 10),
           ),
           _image == null
               ? Text('No image selected.')
               :
-          Listener(
-            child: CustomPaint(
-              child: RepaintBoundary(child: Image.file(_image)),
-              foregroundPainter: drawCutImg(),
-            ),
+          RepaintBoundary(
+              child: Stack(
+                children:items
+              )
+
           ),
           GestureDetector(
             child: Icon(Icons.image,size: 50),
             onTap: (){
-              Navigator.push(context, MaterialPageRoute(builder: (context)=>Cut()));
+              Navigator.push(context, MaterialPageRoute(builder: (context)=>Cut())).then((value){
+                CutTBean ctb = value;
+                print("收到返回的数据"+ctb.width.toString());
+               setState(() {
+                 items.add(MoveMatrixWidget(value));
+               });
+              });
             },
           )
         ],
@@ -70,15 +80,3 @@ class _StateDesign extends State<Design> {
 
 }
 
-class drawCutImg extends CustomPainter{
-  @override
-  void paint(Canvas canvas, Size size) {
-
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return true;
-  }
-
-}
